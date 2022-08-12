@@ -27,7 +27,7 @@ ps: ## Check container status
 	docker compose ps
 
 test: ## Execute tests
-	go test -race -shuffle=on ./...
+	go test -race -v -shuffle=on ./...
 
 help: ## Show options
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)| \
