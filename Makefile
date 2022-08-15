@@ -1,6 +1,7 @@
 .PHONY: build push up down logs ps test help
 VERSION := $$(git describe --tags --always --dirty)
 BRANCH := $$(git symbolic-ref --short HEAD)
+.DEFAULT_GOAL := help
 
 build: ## Build docker image to deploy
 	docker build \
@@ -31,4 +32,4 @@ test: ## Execute tests
 
 help: ## Show options
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)| \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n, $$1, $$2}'
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
