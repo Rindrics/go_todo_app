@@ -21,6 +21,9 @@ up: ## docker compose up with hot reload
 down: ## Stop svc deployed by docker compose
 	docker compose down
 
+lint: ## Lint codes
+	golangci-lint run
+
 logs: ## Tail docker compose logs
 	docker compose logs -f
 
