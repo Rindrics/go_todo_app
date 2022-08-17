@@ -6,6 +6,7 @@ require golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
+	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/google/go-cmp v0.5.8
 )
