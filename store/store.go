@@ -1,7 +1,14 @@
 package store
 
 import (
+	"errors"
+
 	"github.com/Rindrics/go_todo_app/entity"
+)
+
+var (
+	Tasks       = &TaskStore{Tasks: map[entity.TaskID]*entity.Task{}}
+	ErrNotFound = errors.New("not found")
 )
 
 type TaskStore struct {
