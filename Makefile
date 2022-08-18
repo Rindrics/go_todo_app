@@ -4,10 +4,12 @@ BRANCH := $$(git symbolic-ref --short HEAD)
 .DEFAULT_GOAL := help
 
 build: ## Build docker image to deploy
-	docker build \
+	docker buildx create --use
+	docker buildx build --push \
+		--platform=linux/amd64,linux/arm64/v8 \
 		-t rindrics/gotodo:${BRANCH} --target deploy \
 		-t rindrics/gotodo:latest --target deploy \
-		-t rindrics/gotodo:${VERSION} --target deploy ./
+		-t rindrics/gotodo:${VERSION} --target deploy .
 	docker compose build --no-cache
 
 push: ## Push build images to DockerHub
