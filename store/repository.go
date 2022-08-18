@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Rindrics/go_todo_app/clock"
 	"github.com/Rindrics/go_todo_app/config"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -61,3 +62,7 @@ var (
 	_ Execer   = (*sqlx.DB)(nil)
 	_ Execer   = (*sqlx.Tx)(nil)
 )
+
+type Repository struct {
+	Clocker clock.Clocker
+}
