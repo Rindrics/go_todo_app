@@ -29,11 +29,20 @@ lint: ## Lint codes
 logs: ## Tail docker compose logs
 	docker compose logs -f
 
+dry-migrate: ## Try migration
+	mysqldef -u todo -p todo -h 127.0.0.1 -P 33306 todo --dry-run < ./_tools/mysql/schema.sql
+
+migrate:  ## Execute migration
+	mysqldef -u todo -p todo -h 127.0.0.1 -P 33306 todo < ./_tools/mysql/schema.sql
+
 ps: ## Check container status
 	docker compose ps
 
 test: ## Execute tests
 	go test -race -v -shuffle=on ./...
+
+deps: ## Install dependencies
+	go install github.com/k0kubun/sqldef/cmd/mysqldef@latest
 
 help: ## Show options
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)| \
