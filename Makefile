@@ -5,7 +5,7 @@ BRANCH := $$(git symbolic-ref --short HEAD)
 
 build: ## Build docker image to deploy
 	docker buildx create --use
-	docker buildx build \
+	docker buildx build --push \
 		--platform=linux/amd64,linux/arm64/v8 \
 		-t rindrics/gotodo:${BRANCH} --target deploy \
 		-t rindrics/gotodo:latest --target deploy \
