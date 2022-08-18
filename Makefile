@@ -9,7 +9,7 @@ build: ## Build docker image to deploy
 		--platform=linux/amd64,linux/arm64/v8 \
 		-t rindrics/gotodo:${BRANCH} --target deploy \
 		-t rindrics/gotodo:latest --target deploy \
-		-t rindrics/gotodo:${VERSION} --target deploy ./
+		-t rindrics/gotodo:${VERSION} --target deploy .
 	docker compose build --no-cache
 
 push: ## Push build images to DockerHub
