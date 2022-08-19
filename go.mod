@@ -11,7 +11,9 @@ require (
 	github.com/google/go-cmp v0.5.8
 )
 
-require github.com/jmoiron/sqlx v1.3.5 // indirect
+require github.com/jmoiron/sqlx v1.3.5
+
+require github.com/DATA-DOG/go-sqlmock v1.5.0
 
 require (
 	github.com/go-playground/locales v0.14.0 // indirect
