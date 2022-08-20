@@ -26,6 +26,9 @@ down: ## Stop svc deployed by docker compose
 lint: ## Lint codes
 	golangci-lint run
 
+generate: ## Generate codes
+	go generate ./...
+
 logs: ## Tail docker compose logs
 	docker compose logs -f
 
