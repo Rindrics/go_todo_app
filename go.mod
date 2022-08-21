@@ -13,7 +13,16 @@ require (
 
 require github.com/jmoiron/sqlx v1.3.5
 
-require github.com/DATA-DOG/go-sqlmock v1.5.0
+require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/matryer/moq v0.2.7
+)
+
+require (
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
+	golang.org/x/tools v0.1.10 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+)
 
 require (
 	github.com/go-playground/locales v0.14.0 // indirect
