@@ -7,6 +7,7 @@ import (
 	"github.com/Rindrics/go_todo_app/clock"
 	"github.com/Rindrics/go_todo_app/config"
 	"github.com/Rindrics/go_todo_app/handler"
+	"github.com/Rindrics/go_todo_app/service"
 	"github.com/Rindrics/go_todo_app/store"
 	"github.com/go-chi/chi"
 	"github.com/go-playground/validator/v10"
@@ -25,14 +26,12 @@ func NewMux(ctx context.Context, cfg *config.Config) (http.Handler, func(), erro
 	}
 	r := &store.Repository{Clocker: clock.RealClocker{}}
 	at := &handler.AddTask{
-		DB:        db,
-		Repo:      r,
+		Service:   &service.AddTask{DB: db, Repo: r},
 		Validator: v,
 	}
 	mux.Post("/tasks", at.ServeHTTP)
 	lt := &handler.ListTask{
-		DB:   db,
-		Repo: r,
+		Service: &service.ListTask{DB: db, Repo: r},
 	}
 	mux.Get("/tasks", lt.ServeHTTP)
 	return mux, cleanup, nil
