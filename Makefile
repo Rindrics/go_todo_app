@@ -1,6 +1,6 @@
 .PHONY: build push up down logs ps test help
 VERSION := $$(git describe --tags --always --dirty)
-BRANCH := $$(git symbolic-ref --short HEAD)
+BRANCH := $$(git branch --show-current)
 .DEFAULT_GOAL := help
 
 build: ## Build docker image to deploy
