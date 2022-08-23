@@ -5,18 +5,38 @@ import (
 	"fmt"
 	"time"
 
+	_ "embed"
+
 	"github.com/Rindrics/go_todo_app/clock"
 	"github.com/Rindrics/go_todo_app/entity"
 	"github.com/Rindrics/go_todo_app/store"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
+//go:embed cert/secret.pem
+var rawPrivKey []byte
+
 type JWTer struct {
-	PrivateKey string
+	PrivateKey jwk.Key
 	Store      store.KVS
 	Clocker    clock.Clocker
+}
+
+func NewJWTer(store store.KVS) (*JWTer, error) {
+	j := &JWTer{Store: store}
+
+	privkey, err := parse(rawPrivKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed in NewJWTer: private key: %w", err)
+	}
+
+	j.PrivateKey = privkey
+	j.Clocker = clock.RealClocker{}
+
+	return j, nil
 }
 
 func (j *JWTer) GenerateToken(ctx context.Context, userID entity.UserID) ([]byte, error) {
@@ -36,4 +56,13 @@ func (j *JWTer) GenerateToken(ctx context.Context, userID entity.UserID) ([]byte
 	}
 
 	return jwt.Sign(tok, jwt.WithKey(jwa.RS256, j.PrivateKey))
+}
+
+func parse(rawKey []byte) (jwk.Key, error) {
+	key, err := jwk.ParseKey(rawKey, jwk.WithPEM(true))
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }
