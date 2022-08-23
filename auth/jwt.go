@@ -18,15 +18,18 @@ import (
 //go:embed cert/secret.pem
 var rawPrivKey []byte
 
+//go:embed cert/public.pem
+var rawPubKey []byte
+
 //go:generate go run github.com/matryer/moq -out moq_test.go . Store
 type Store interface {
 	Save(ctx context.Context, key string, userID entity.UserID) error
 }
 
 type JWTer struct {
-	PrivateKey jwk.Key
-	Store      Store
-	Clocker    clock.Clocker
+	PrivateKey, PublicKey jwk.Key
+	Store                 Store
+	Clocker               clock.Clocker
 }
 
 func NewJWTer(s Store, c clock.Clocker) (*JWTer, error) {
@@ -40,7 +43,13 @@ func NewJWTer(s Store, c clock.Clocker) (*JWTer, error) {
 		return nil, fmt.Errorf("failed in NewJWTer: private key: %w", err)
 	}
 
+	pubkey, err := parse(rawPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed in NewJWTer: publice key: %w", err)
+	}
+
 	j.PrivateKey = privkey
+	j.PublicKey = pubkey
 
 	return j, nil
 }
