@@ -19,6 +19,9 @@ var _ Store = &StoreMock{}
 //
 //		// make and configure a mocked Store
 //		mockedStore := &StoreMock{
+//			LoadFunc: func(ctx context.Context, key string) (entity.UserID, error) {
+//				panic("mock out the Load method")
+//			},
 //			SaveFunc: func(ctx context.Context, key string, userID entity.UserID) error {
 //				panic("mock out the Save method")
 //			},
@@ -29,11 +32,21 @@ var _ Store = &StoreMock{}
 //
 //	}
 type StoreMock struct {
+	// LoadFunc mocks the Load method.
+	LoadFunc func(ctx context.Context, key string) (entity.UserID, error)
+
 	// SaveFunc mocks the Save method.
 	SaveFunc func(ctx context.Context, key string, userID entity.UserID) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Load holds details about calls to the Load method.
+		Load []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Key is the key argument value.
+			Key string
+		}
 		// Save holds details about calls to the Save method.
 		Save []struct {
 			// Ctx is the ctx argument value.
@@ -44,7 +57,44 @@ type StoreMock struct {
 			UserID entity.UserID
 		}
 	}
+	lockLoad sync.RWMutex
 	lockSave sync.RWMutex
+}
+
+// Load calls LoadFunc.
+func (mock *StoreMock) Load(ctx context.Context, key string) (entity.UserID, error) {
+	if mock.LoadFunc == nil {
+		panic("StoreMock.LoadFunc: method is nil but Store.Load was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Key string
+	}{
+		Ctx: ctx,
+		Key: key,
+	}
+	mock.lockLoad.Lock()
+	mock.calls.Load = append(mock.calls.Load, callInfo)
+	mock.lockLoad.Unlock()
+	return mock.LoadFunc(ctx, key)
+}
+
+// LoadCalls gets all the calls that were made to Load.
+// Check the length with:
+//
+//	len(mockedStore.LoadCalls())
+func (mock *StoreMock) LoadCalls() []struct {
+	Ctx context.Context
+	Key string
+} {
+	var calls []struct {
+		Ctx context.Context
+		Key string
+	}
+	mock.lockLoad.RLock()
+	calls = mock.calls.Load
+	mock.lockLoad.RUnlock()
+	return calls
 }
 
 // Save calls SaveFunc.
