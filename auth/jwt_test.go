@@ -12,6 +12,7 @@ import (
 
 	"github.com/Rindrics/go_todo_app/clock"
 	"github.com/Rindrics/go_todo_app/entity"
+	"github.com/Rindrics/go_todo_app/store"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -53,6 +54,12 @@ func TestJWTer_GenerateToken(t *testing.T) {
 	if len(got) == 0 {
 		t.Errorf("token is empty")
 	}
+}
+
+type FixedTomorrowClocker struct{}
+
+func (c FixedTomorrowClocker) Now() time.Time {
+	return clock.FixedClocker{}.Now().Add(24 * time.Hour)
 }
 
 func TestJWTer_GetToken(t *testing.T) {
@@ -102,6 +109,79 @@ func TestJWTer_GetToken(t *testing.T) {
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("GetToken() got = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("ng", func(t *testing.T) {
+		t.Parallel()
+
+		c := clock.FixedClocker{}
+		want, err := jwt.NewBuilder().
+			JwtID(uuid.New().String()).
+			Issuer("github.com/Rindrics/go_todo_app").
+			Subject("access_token").
+			IssuedAt(c.Now()).
+			Expiration(c.Now().Add(30 * time.Minute)).
+			Build()
+		if err != nil {
+			t.Fatal(err)
+		}
+		pkey, err := jwk.ParseKey(rawPrivKey, jwk.WithPEM(true))
+		if err != nil {
+			t.Fatal(err)
+		}
+		signed, err := jwt.Sign(want, jwt.WithKey(jwa.RS256, pkey))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		type moq struct {
+			userID entity.UserID
+			err    error
+		}
+		tests := map[string]struct {
+			c   clock.Clocker
+			moq moq
+		}{
+			"expire": {
+				c: FixedTomorrowClocker{},
+			},
+			"notFoundInStore": {
+				c: clock.FixedClocker{},
+				moq: moq{
+					err: store.ErrNotFound,
+				},
+			},
+		}
+
+		for n, tt := range tests {
+			t.Run(n, func(t *testing.T) {
+				t.Parallel()
+
+				ctx := context.Background()
+				moq := &StoreMock{}
+				moq.LoadFunc = func(ctx context.Context, key string) (entity.UserID, error) {
+					return tt.moq.userID, tt.moq.err
+				}
+				sut, err := NewJWTer(moq, tt.c)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				req := httptest.NewRequest(
+					http.MethodGet,
+					"https://foo.com/bar",
+					nil,
+				)
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", signed))
+				got, err := sut.GetToken(ctx, req)
+				if err == nil {
+					t.Errorf("want error, but got nil")
+				}
+				if got != nil {
+					t.Errorf("want nil, but got %v", got)
+				}
+			})
 		}
 	})
 }
