@@ -9,7 +9,6 @@ import (
 
 	"github.com/Rindrics/go_todo_app/clock"
 	"github.com/Rindrics/go_todo_app/entity"
-	"github.com/Rindrics/go_todo_app/store"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -19,14 +18,19 @@ import (
 //go:embed cert/secret.pem
 var rawPrivKey []byte
 
+//go:generate go run github.com/matryer/moq -out moq_test.go . Store
+type Store interface {
+	Save(ctx context.Context, key string, userID entity.UserID) error
+}
+
 type JWTer struct {
 	PrivateKey jwk.Key
-	Store      store.KVS
+	Store      Store
 	Clocker    clock.Clocker
 }
 
-func NewJWTer(store store.KVS) (*JWTer, error) {
-	j := &JWTer{Store: store}
+func NewJWTer(s Store) (*JWTer, error) {
+	j := &JWTer{Store: s}
 
 	privkey, err := parse(rawPrivKey)
 	if err != nil {
