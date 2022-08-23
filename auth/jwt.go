@@ -29,8 +29,11 @@ type JWTer struct {
 	Clocker    clock.Clocker
 }
 
-func NewJWTer(s Store) (*JWTer, error) {
-	j := &JWTer{Store: s}
+func NewJWTer(s Store, c clock.Clocker) (*JWTer, error) {
+	j := &JWTer{
+		Store:   s,
+		Clocker: c,
+	}
 
 	privkey, err := parse(rawPrivKey)
 	if err != nil {
@@ -38,7 +41,6 @@ func NewJWTer(s Store) (*JWTer, error) {
 	}
 
 	j.PrivateKey = privkey
-	j.Clocker = clock.RealClocker{}
 
 	return j, nil
 }
