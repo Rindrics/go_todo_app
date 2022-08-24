@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	_ "embed"
@@ -23,15 +24,19 @@ const (
 //go:embed cert/secret.pem
 var rawPrivKey []byte
 
+//go:embed cert/public.pem
+var rawPubKey []byte
+
 //go:generate go run github.com/matryer/moq -out moq_test.go . Store
 type Store interface {
 	Save(ctx context.Context, key string, userID entity.UserID) error
+	Load(ctx context.Context, key string) (entity.UserID, error)
 }
 
 type JWTer struct {
-	PrivateKey jwk.Key
-	Store      Store
-	Clocker    clock.Clocker
+	PrivateKey, PublicKey jwk.Key
+	Store                 Store
+	Clocker               clock.Clocker
 }
 
 func NewJWTer(s Store, c clock.Clocker) (*JWTer, error) {
@@ -45,7 +50,13 @@ func NewJWTer(s Store, c clock.Clocker) (*JWTer, error) {
 		return nil, fmt.Errorf("failed in NewJWTer: private key: %w", err)
 	}
 
+	pubkey, err := parse(rawPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed in NewJWTer: publice key: %w", err)
+	}
+
 	j.PrivateKey = privkey
+	j.PublicKey = pubkey
 
 	return j, nil
 }
@@ -78,4 +89,25 @@ func parse(rawKey []byte) (jwk.Key, error) {
 	}
 
 	return key, nil
+}
+
+func (j *JWTer) GetToken(ctx context.Context, r *http.Request) (jwt.Token, error) {
+	token, err := jwt.ParseRequest(
+		r,
+		jwt.WithKey(jwa.RS256, j.PublicKey),
+		jwt.WithValidate(false),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := jwt.Validate(token, jwt.WithClock(j.Clocker)); err != nil {
+		return nil, fmt.Errorf("GetToken: failed to validate token: %w", err)
+	}
+
+	if _, err := j.Store.Load(ctx, token.JwtID()); err != nil {
+		return nil, fmt.Errorf("GetToken: %q expired: %w", token.JwtID(), err)
+	}
+
+	return token, nil
 }
