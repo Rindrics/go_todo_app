@@ -154,3 +154,12 @@ func (j *JWTer) FillContext(r *http.Request) (*http.Request, error) {
 
 	return clone, nil
 }
+
+func IsAdmin(ctx context.Context) bool {
+	role, ok := GetRole(ctx)
+	if !ok {
+		return false
+	}
+
+	return role == "odmin"
+}
