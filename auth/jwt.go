@@ -136,3 +136,21 @@ func SetRole(ctx context.Context, tok jwt.Token) context.Context {
 	}
 	return context.WithValue(ctx, roleKey{}, role)
 }
+
+func (j *JWTer) FillContext(r *http.Request) (*http.Request, error) {
+	token, err := j.GetToken(r.Context(), r)
+	if err != nil {
+		return nil, err
+	}
+
+	uid, err := j.Store.Load(r.Context(), token.JwtID())
+	if err != nil {
+		return nil, err
+	}
+	ctx := SetUserID(r.Context(), uid)
+
+	ctx = SetRole(ctx, token)
+	clone := r.Clone(ctx)
+
+	return clone, nil
+}
