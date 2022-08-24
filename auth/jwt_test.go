@@ -64,125 +64,123 @@ func (c FixedTomorrowClocker) Now() time.Time {
 }
 
 func TestJWTer_GetToken(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		t.Parallel()
+	t.Parallel()
 
-		c := clock.FixedClocker{}
-		want, err := jwt.NewBuilder().
-			JwtID(uuid.New().String()).
-			Issuer("github.com/Rindrics/go_todo_app").
-			Subject("access_token").
-			IssuedAt(c.Now()).
-			Expiration(c.Now().Add(30 * time.Minute)).
-			Build()
-		if err != nil {
-			t.Fatal(err)
-		}
-		pkey, err := jwk.ParseKey(rawPrivKey, jwk.WithPEM(true))
-		if err != nil {
-			t.Fatal(err)
-		}
-		signed, err := jwt.Sign(want, jwt.WithKey(jwa.RS256, pkey))
-		if err != nil {
-			t.Fatal(err)
-		}
-		userID := entity.UserID(20)
+	c := clock.FixedClocker{}
+	want, err := jwt.NewBuilder().
+		JwtID(uuid.New().String()).
+		Issuer("github.com/Rindrics/go_todo_app").
+		Subject("access_token").
+		IssuedAt(c.Now()).
+		Expiration(c.Now().Add(30 * time.Minute)).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkey, err := jwk.ParseKey(rawPrivKey, jwk.WithPEM(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, err := jwt.Sign(want, jwt.WithKey(jwa.RS256, pkey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	userID := entity.UserID(20)
 
-		ctx := context.Background()
-		moq := &StoreMock{}
-		moq.LoadFunc = func(ctx context.Context, key string) (entity.UserID, error) {
-			return userID, nil
-		}
-		sut, err := NewJWTer(moq, c)
-		if err != nil {
-			t.Fatal(err)
-		}
+	ctx := context.Background()
+	moq := &StoreMock{}
+	moq.LoadFunc = func(ctx context.Context, key string) (entity.UserID, error) {
+		return userID, nil
+	}
+	sut, err := NewJWTer(moq, c)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		req := httptest.NewRequest(
-			http.MethodGet,
-			"https://foo.com/bar",
-			nil,
-		)
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", signed))
-		got, err := sut.GetToken(ctx, req)
-		if err != nil {
-			t.Fatalf("want no error, but got %v", err)
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("GetToken() got = %v, want %v", got, want)
-		}
-	})
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"https://foo.com/bar",
+		nil,
+	)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", signed))
+	got, err := sut.GetToken(ctx, req)
+	if err != nil {
+		t.Fatalf("want no error, but got %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("GetToken() got = %v, want %v", got, want)
+	}
+}
 
-	t.Run("ng", func(t *testing.T) {
-		t.Parallel()
+func TestJWTer_GetToken_NG(t *testing.T) {
+	t.Parallel()
 
-		c := clock.FixedClocker{}
-		want, err := jwt.NewBuilder().
-			JwtID(uuid.New().String()).
-			Issuer("github.com/Rindrics/go_todo_app").
-			Subject("access_token").
-			IssuedAt(c.Now()).
-			Expiration(c.Now().Add(30 * time.Minute)).
-			Build()
-		if err != nil {
-			t.Fatal(err)
-		}
-		pkey, err := jwk.ParseKey(rawPrivKey, jwk.WithPEM(true))
-		if err != nil {
-			t.Fatal(err)
-		}
-		signed, err := jwt.Sign(want, jwt.WithKey(jwa.RS256, pkey))
-		if err != nil {
-			t.Fatal(err)
-		}
+	c := clock.FixedClocker{}
+	want, err := jwt.NewBuilder().
+		JwtID(uuid.New().String()).
+		Issuer("github.com/Rindrics/go_todo_app").
+		Subject("access_token").
+		IssuedAt(c.Now()).
+		Expiration(c.Now().Add(30 * time.Minute)).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkey, err := jwk.ParseKey(rawPrivKey, jwk.WithPEM(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, err := jwt.Sign(want, jwt.WithKey(jwa.RS256, pkey))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		type moq struct {
-			userID entity.UserID
-			err    error
-		}
-		tests := map[string]struct {
-			c   clock.Clocker
-			moq moq
-		}{
-			"expire": {
-				c: FixedTomorrowClocker{},
+	type moq struct {
+		userID entity.UserID
+		err    error
+	}
+	tests := map[string]struct {
+		c   clock.Clocker
+		moq moq
+	}{
+		"expire": {
+			c: FixedTomorrowClocker{},
+		},
+		"notFoundInStore": {
+			c: clock.FixedClocker{},
+			moq: moq{
+				err: store.ErrNotFound,
 			},
-			"notFoundInStore": {
-				c: clock.FixedClocker{},
-				moq: moq{
-					err: store.ErrNotFound,
-				},
-			},
-		}
+		},
+	}
 
-		for n, tt := range tests {
-			t.Run(n, func(t *testing.T) {
-				t.Parallel()
+	for n, tt := range tests {
+		t.Run(n, func(t *testing.T) {
+			t.Parallel()
 
-				ctx := context.Background()
-				moq := &StoreMock{}
-				moq.LoadFunc = func(ctx context.Context, key string) (entity.UserID, error) {
-					return tt.moq.userID, tt.moq.err
-				}
-				sut, err := NewJWTer(moq, tt.c)
-				if err != nil {
-					t.Fatal(err)
-				}
+			ctx := context.Background()
+			moq := &StoreMock{}
+			moq.LoadFunc = func(ctx context.Context, key string) (entity.UserID, error) {
+				return tt.moq.userID, tt.moq.err
+			}
+			sut, err := NewJWTer(moq, tt.c)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-				req := httptest.NewRequest(
-					http.MethodGet,
-					"https://foo.com/bar",
-					nil,
-				)
-				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", signed))
-				got, err := sut.GetToken(ctx, req)
-				if err == nil {
-					t.Errorf("want error, but got nil")
-				}
-				if got != nil {
-					t.Errorf("want nil, but got %v", got)
-				}
-			})
-		}
-	})
+			req := httptest.NewRequest(
+				http.MethodGet,
+				"https://foo.com/bar",
+				nil,
+			)
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", signed))
+			got, err := sut.GetToken(ctx, req)
+			if err == nil {
+				t.Errorf("want error, but got nil")
+			}
+			if got != nil {
+				t.Errorf("want nil, but got %v", got)
+			}
+		})
+	}
 }
