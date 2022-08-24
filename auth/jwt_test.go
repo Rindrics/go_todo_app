@@ -20,6 +20,7 @@ func TestJWTer_GenerateToken(t *testing.T) {
 	ctx := context.Background()
 	moq := &StoreMock{}
 	wantID := entity.UserID(1234)
+	u := &entity.User{ID: wantID}
 	moq.SaveFunc = func(ctx context.Context, key string, userID entity.UserID) error {
 		if userID != wantID {
 			t.Errorf("want %d, got %d", wantID, userID)
@@ -31,7 +32,7 @@ func TestJWTer_GenerateToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := sut.GenerateToken(ctx, wantID)
+	got, err := sut.GenerateToken(ctx, *u)
 	if err != nil {
 		t.Fatalf("want no error, got %s", err)
 	}
