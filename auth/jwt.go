@@ -111,3 +111,46 @@ func (j *JWTer) GetToken(ctx context.Context, r *http.Request) (jwt.Token, error
 
 	return token, nil
 }
+
+type userIDKey struct{}
+type roleKey struct{}
+
+func GetUserID(ctx context.Context) (entity.UserID, bool) {
+	id, ok := ctx.Value(userIDKey{}).(entity.UserID)
+	return id, ok
+}
+
+func SetUserID(ctx context.Context, uid entity.UserID) context.Context {
+	return context.WithValue(ctx, userIDKey{}, uid)
+}
+
+func GetRole(ctx context.Context) (string, bool) {
+	role, ok := ctx.Value(roleKey{}).(string)
+	return role, ok
+}
+
+func SetRole(ctx context.Context, tok jwt.Token) context.Context {
+	role, ok := GetRole(ctx)
+	if !ok {
+		return context.WithValue(ctx, roleKey{}, "")
+	}
+	return context.WithValue(ctx, roleKey{}, role)
+}
+
+func (j *JWTer) FillContext(r *http.Request) (*http.Request, error) {
+	token, err := j.GetToken(r.Context(), r)
+	if err != nil {
+		return nil, err
+	}
+
+	uid, err := j.Store.Load(r.Context(), token.JwtID())
+	if err != nil {
+		return nil, err
+	}
+	ctx := SetUserID(r.Context(), uid)
+
+	ctx = SetRole(ctx, token)
+	clone := r.Clone(ctx)
+
+	return clone, nil
+}
