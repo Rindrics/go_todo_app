@@ -16,6 +16,11 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
+const (
+	RoleKey     = "role"
+	UserNameKey = "user_name"
+)
+
 //go:embed cert/secret.pem
 var rawPrivKey []byte
 
@@ -56,19 +61,21 @@ func NewJWTer(s Store, c clock.Clocker) (*JWTer, error) {
 	return j, nil
 }
 
-func (j *JWTer) GenerateToken(ctx context.Context, userID entity.UserID) ([]byte, error) {
+func (j *JWTer) GenerateToken(ctx context.Context, u entity.User) ([]byte, error) {
 	tok, err := jwt.NewBuilder().
 		JwtID(uuid.New().String()).
 		Issuer("github.com/Rindrics/go_todo_app").
 		Subject("access token").
 		IssuedAt(j.Clocker.Now()).
-		Expiration(j.Clocker.Now().Add(30 * time.Minute)).
+		Expiration(j.Clocker.Now().Add(30*time.Minute)).
+		Claim(RoleKey, u.Role).
+		Claim(UserNameKey, u.Name).
 		Build()
 	if err != nil {
 		return nil, fmt.Errorf("GetToken: failed to build token: %w", err)
 	}
 
-	if err := j.Store.Save(ctx, tok.JwtID(), userID); err != nil {
+	if err := j.Store.Save(ctx, tok.JwtID(), u.ID); err != nil {
 		return nil, err
 	}
 
