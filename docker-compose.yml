@@ -1,10 +1,11 @@
 version: "3.9"
 services:
   app:
-    image: gotodo
+    image: gotodo-application
     build:
       args:
         - target=dev
+      dockerfile: dockerfiles/application
     environment:
       TODO_ENV: dev
       PORT: 8080
@@ -20,7 +21,9 @@ services:
     ports:
       - "18000:8080"
   todo-db:
-    image: mysql:8.0.29
+    image: gotodo-database
+    build:
+      dockerfile: dockerfiles/database
     platform: linux/amd64
     container_name: todo-db
     environment:
