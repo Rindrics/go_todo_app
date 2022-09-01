@@ -3,13 +3,26 @@ VERSION := $$(git describe --tags --always --dirty)
 BRANCH := $$(git branch --show-current)
 .DEFAULT_GOAL := help
 
-build: ## Build docker image to deploy
+build: build-application
+build-application: build-%: FORCE ## Build application image to deploy
 	docker buildx create --use
 	docker buildx build --push \
 		--platform=linux/amd64,linux/arm64/v8 \
-		-t rindrics/gotodo:${BRANCH} --target deploy \
-		-t rindrics/gotodo:latest --target deploy \
-		-t rindrics/gotodo:${VERSION} --target deploy .
+		-t rindrics/gotodo-$*:${BRANCH} --target deploy \
+		-t rindrics/gotodo-$*:latest --target deploy \
+		-t rindrics/gotodo-$*:${VERSION} --target deploy -f dockerfiles/$* .
+
+build: build-database
+build-database: build-%: FORCE ## Build database image to deploy
+	docker buildx create --use
+	docker buildx build --push \
+		--platform=linux/amd64,linux/arm64/v8 \
+		-t rindrics/gotodo-$*:${BRANCH} \
+		-t rindrics/gotodo-$*:latest\
+		-t rindrics/gotodo-$*:${VERSION} -f dockerfiles/$* .
+
+build: build-compose
+build-compose: ## Build for docker compose
 	docker compose build --no-cache
 
 push: ## Push build images to DockerHub
@@ -50,3 +63,5 @@ deps: ## Install dependencies
 help: ## Show options
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST)| \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+FORCE:
