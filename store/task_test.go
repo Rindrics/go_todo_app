@@ -20,10 +20,10 @@ func TestRepository_ListTasks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wants := prepareTasks(ctx, t, tx)
+	wantUserID, wants := prepareTasks(ctx, t, tx)
 
 	sut := &Repository{}
-	gots, err := sut.ListTasks(ctx, tx)
+	gots, err := sut.ListTasks(ctx, tx, wantUserID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,39 +53,50 @@ func prepareUser(ctx context.Context, t *testing.T, db Execer) entity.UserID {
 	return entity.UserID(id)
 }
 
-func prepareTasks(ctx context.Context, t *testing.T, con Execer) entity.Tasks {
+func prepareTasks(ctx context.Context, t *testing.T, con Execer) (entity.UserID, entity.Tasks) {
 	t.Helper()
+
 	// Initial cleanup
 	if _, err := con.ExecContext(ctx, "DELETE FROM task;"); err != nil {
 		t.Logf("failed to initialize task: %v", err)
 	}
+
+	userID := prepareUser(ctx, t, con)
+	otherUserID := prepareUser(ctx, t, con)
 	c := clock.FixedClocker{}
 	wants := entity.Tasks{
 		{
-			UserID: prepareUser(ctx, t, con),
+			UserID: userID,
 			Title:  "want task 1", Status: entity.TaskStatusTodo,
 			Created: c.Now(), Modified: c.Now(),
 		},
 		{
-			UserID: prepareUser(ctx, t, con),
+			UserID: userID,
 			Title:  "want task 2", Status: entity.TaskStatusTodo,
 			Created: c.Now(), Modified: c.Now(),
 		},
-		{
-			UserID: prepareUser(ctx, t, con),
-			Title:  "want task 3", Status: entity.TaskStatusDone,
-			Created: c.Now(), Modified: c.Now(),
-		},
 	}
+	tasks := entity.Tasks{
+		wants[0],
+		{
+			UserID:   otherUserID,
+			Title:    "not want task",
+			Status:   "todo",
+			Created:  c.Now(),
+			Modified: c.Now(),
+		},
+		wants[1],
+	}
+
 	result, err := con.ExecContext(ctx,
 		`INSERT INTO task (user_id, title, status, created, modified)
                   VALUES
                       (?, ?, ?, ?, ?),
                       (?, ?, ?, ?, ?),
                       (?, ?, ?, ?, ?);`,
-		wants[0].UserID, wants[0].Title, wants[0].Status, wants[0].Created, wants[0].Modified,
-		wants[1].UserID, wants[1].Title, wants[1].Status, wants[1].Created, wants[1].Modified,
-		wants[2].UserID, wants[2].Title, wants[2].Status, wants[2].Created, wants[2].Modified,
+		tasks[0].UserID, tasks[0].Title, tasks[0].Status, tasks[0].Created, tasks[0].Modified,
+		tasks[1].UserID, tasks[1].Title, tasks[1].Status, tasks[1].Created, tasks[1].Modified,
+		tasks[2].UserID, tasks[2].Title, tasks[2].Status, tasks[2].Created, tasks[2].Modified,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -94,10 +105,10 @@ func prepareTasks(ctx context.Context, t *testing.T, con Execer) entity.Tasks {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wants[0].ID = entity.TaskID(id)
-	wants[1].ID = entity.TaskID(id + 1)
-	wants[2].ID = entity.TaskID(id + 2)
-	return wants
+	tasks[0].ID = entity.TaskID(id)
+	tasks[1].ID = entity.TaskID(id + 1)
+	tasks[2].ID = entity.TaskID(id + 2)
+	return userID, wants
 }
 
 func TestRepository_AddTask(t *testing.T) {
