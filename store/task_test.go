@@ -8,6 +8,7 @@ import (
 	"github.com/Rindrics/go_todo_app/clock"
 	"github.com/Rindrics/go_todo_app/entity"
 	"github.com/Rindrics/go_todo_app/testutil"
+	"github.com/Rindrics/go_todo_app/testutil/fixture"
 	"github.com/google/go-cmp/cmp"
 	"github.com/jmoiron/sqlx"
 )
@@ -31,6 +32,27 @@ func TestRepository_ListTasks(t *testing.T) {
 	}
 }
 
+func prepareUser(ctx context.Context, t *testing.T, db Execer) entity.UserID {
+	t.Helper()
+
+	u := fixture.User(nil)
+	// add user to db
+	result, err := db.ExecContext(ctx,
+		`INSERT INTO user (name, password, role, created, modified)
+                 VALUES (?, ?, ?, ?, ?);`,
+		u.Name, u.Password, u.Role, u.Created, u.Modified,
+	)
+	if err != nil {
+		t.Fatalf("insert user: %v", err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		t.Fatalf("got user_id: %v", err)
+	}
+
+	return entity.UserID(id)
+}
+
 func prepareTasks(ctx context.Context, t *testing.T, con Execer) entity.Tasks {
 	t.Helper()
 	// Initial cleanup
@@ -40,27 +62,30 @@ func prepareTasks(ctx context.Context, t *testing.T, con Execer) entity.Tasks {
 	c := clock.FixedClocker{}
 	wants := entity.Tasks{
 		{
-			Title: "want task 1", Status: entity.TaskStatusTodo,
+			UserID: prepareUser(ctx, t, con),
+			Title:  "want task 1", Status: entity.TaskStatusTodo,
 			Created: c.Now(), Modified: c.Now(),
 		},
 		{
-			Title: "want task 2", Status: entity.TaskStatusTodo,
+			UserID: prepareUser(ctx, t, con),
+			Title:  "want task 2", Status: entity.TaskStatusTodo,
 			Created: c.Now(), Modified: c.Now(),
 		},
 		{
-			Title: "want task 3", Status: entity.TaskStatusDone,
+			UserID: prepareUser(ctx, t, con),
+			Title:  "want task 3", Status: entity.TaskStatusDone,
 			Created: c.Now(), Modified: c.Now(),
 		},
 	}
 	result, err := con.ExecContext(ctx,
-		`INSERT INTO task (title, status, created, modified)
+		`INSERT INTO task (user_id, title, status, created, modified)
                   VALUES
-                      (?, ?, ?, ?),
-                      (?, ?, ?, ?),
-                      (?, ?, ?, ?);`,
-		wants[0].Title, wants[0].Status, wants[0].Created, wants[0].Modified,
-		wants[1].Title, wants[1].Status, wants[1].Created, wants[1].Modified,
-		wants[2].Title, wants[2].Status, wants[2].Created, wants[2].Modified,
+                      (?, ?, ?, ?, ?),
+                      (?, ?, ?, ?, ?),
+                      (?, ?, ?, ?, ?);`,
+		wants[0].UserID, wants[0].Title, wants[0].Status, wants[0].Created, wants[0].Modified,
+		wants[1].UserID, wants[1].Title, wants[1].Status, wants[1].Created, wants[1].Modified,
+		wants[2].UserID, wants[2].Title, wants[2].Status, wants[2].Created, wants[2].Modified,
 	)
 	if err != nil {
 		t.Fatal(err)
