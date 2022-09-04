@@ -13,6 +13,7 @@ CREATE TABLE `user`
 CREATE TABLE `task`
 (
 	`id`		BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Task ID',
+	`user_id`	BIGINT UNSIGNED NOT NULL COMMENT 'ID of user who created the task',
 	`title`		VARCHAR(128) NOT NULL COMMENT 'Task title',
 	`status` 	VARCHAR(20) NOT NULL COMMENT 'Task status',
 	`created` 	DATETIME(6) NOT NULL COMMENT 'Date record created',
