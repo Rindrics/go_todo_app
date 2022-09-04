@@ -130,7 +130,7 @@ func GetRole(ctx context.Context) (string, bool) {
 }
 
 func SetRole(ctx context.Context, tok jwt.Token) context.Context {
-	role, ok := GetRole(ctx)
+	role, ok := tok.Get(RoleKey)
 	if !ok {
 		return context.WithValue(ctx, roleKey{}, "")
 	}
