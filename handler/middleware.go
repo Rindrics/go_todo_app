@@ -22,7 +22,7 @@ func AuthMiddleware(j *auth.JWTer) func(next http.Handler) http.Handler {
 	}
 }
 
-func AdminMiddlewtare(next http.Handler) http.Handler {
+func AdminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !auth.IsAdmin(r.Context()) {
 			RespondJSON(r.Context(), w, ErrResponse{

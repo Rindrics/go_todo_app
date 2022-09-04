@@ -161,5 +161,5 @@ func IsAdmin(ctx context.Context) bool {
 		return false
 	}
 
-	return role == "odmin"
+	return role == "admin"
 }
